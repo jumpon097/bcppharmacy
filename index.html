@@ -212,8 +212,13 @@
                     </div>
                     <div class="form-group span-2">
                         <label>6. ac or pc (ก่อน/หลังอาหาร)</label>
-                        <input type="text" id="drugMeal" placeholder="เช่น ก่อนอาหาร" list="mealList" onkeydown="handleEnter(event, 'drugTime')">
-                        <datalist id="mealList"><option value="ก่อนอาหาร"><option value="หลังอาหาร"><option value="พร้อมอาหาร"></datalist>
+                        <input type="text" id="drugMeal" placeholder="พิมพ์ ac, pc, wm หรือ -" list="mealList" onchange="translateMeal()" onkeydown="handleEnter(event, 'drugTime')">
+                        <datalist id="mealList">
+                            <option value="-">
+                            <option value="ก่อนอาหาร">
+                            <option value="หลังอาหาร">
+                            <option value="พร้อมอาหาร">
+                        </datalist>
                     </div>
                     <div class="form-group span-2">
                         <label>7. เวลา (พิมพ์ Code ได้ เช่น bid)</label>
@@ -373,6 +378,19 @@
             }
         }
 
+        function translateMeal() {
+            let el = document.getElementById('drugMeal');
+            let val = el.value.trim().toLowerCase();
+            const mealMap = {
+                'ac': 'ก่อนอาหาร',
+                'pc': 'หลังอาหาร',
+                'wm': 'พร้อมอาหาร'
+            };
+            if (mealMap[val]) {
+                el.value = mealMap[val]; // แปลงร่างเป็นคำเต็ม
+            }
+        }
+
         // --- ระบบนำทางด้วยคีย์บอร์ด (Enter ตามลำดับเป๊ะๆ) ---
         function handleEnter(event, nextFieldId, isDrugSearch = false) {
             if (event.key === 'Enter') {
@@ -382,6 +400,7 @@
                 
                 // ตรวจสอบและแปลงคำทันทีเมื่อกด Enter ข้ามช่อง
                 if (event.target.id === 'drugUse') checkAndTranslate('drugUse', 'uses');
+                if (event.target.id === 'drugMeal') translateMeal();
                 if (event.target.id === 'drugTime') checkAndTranslate('drugTime', 'times');
 
                 if (nextFieldId === 'ADD') {
