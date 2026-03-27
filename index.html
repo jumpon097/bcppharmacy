@@ -10,6 +10,7 @@
     <meta name="theme-color" content="#005b9f">
     <link rel="apple-touch-icon" href="https://img1.pic.in.th/images/logoUBCH.png">
     
+    <!-- หากต้องการใช้งานแบบ Offline 100% โดยไม่ต่อเน็ตเลย ให้ดาวน์โหลดไฟล์ xlsx.full.min.js มาไว้ที่เครื่อง และเปลี่ยน src เป็น "xlsx.full.min.js" -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -303,7 +304,7 @@
 
         <!-- TAB: ตั้งค่า -->
         <div id="settings" class="tab-content">
-            <h3 style="color: var(--primary);">สถานะข้อมูลในเครื่อง</h3>
+            <h3 style="color: var(--primary);">สถานะข้อมูลในเครื่อง (Local Storage)</h3>
             <ul>
                 <li>รายการยา (list2.xls): <span id="status-drugs" class="status-badge status-none">ไม่มีข้อมูล</span></li>
                 <li>วิธีใช้ (use.xls): <span id="status-uses" class="status-badge status-none">ไม่มีข้อมูล</span></li>
@@ -312,21 +313,31 @@
             
             <hr>
             <h3 style="color: var(--primary);">อัพโหลดไฟล์ข้อมูล (รองรับ .xls, .csv, .xlsx)</h3>
+            <p style="font-size: 13px; color: #666;">* ข้อมูลที่อัพโหลดจะถูกจัดเก็บไว้ใน Local Storage ของเบราว์เซอร์อย่างถาวร ทำให้สามารถใช้งานแบบ Offline ได้ 100%</p>
             <div class="grid-3">
                 <div class="form-group">
                     <label>1. รายการและราคายา (list2.xls)</label>
                     <input type="file" id="fileDrugs" accept=".xlsx, .xls, .csv">
-                    <button class="btn-primary" onclick="uploadData('fileDrugs', 'drugs')" style="margin-top: 5px; width: 100%;">อัพโหลดรายการยา</button>
+                    <div style="display: flex; gap: 5px; margin-top: 5px;">
+                        <button class="btn-primary" onclick="uploadData('fileDrugs', 'drugs')" style="flex: 1;">อัพโหลด</button>
+                        <button class="btn-danger" onclick="clearData('drugs')" style="flex: 0.5;">ลบข้อมูล</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>2. วิธีใช้ (use.xls)</label>
                     <input type="file" id="fileUses" accept=".xlsx, .xls, .csv">
-                    <button class="btn-primary" onclick="uploadData('fileUses', 'uses')" style="margin-top: 5px; width: 100%;">อัพโหลดวิธีใช้</button>
+                    <div style="display: flex; gap: 5px; margin-top: 5px;">
+                        <button class="btn-primary" onclick="uploadData('fileUses', 'uses')" style="flex: 1;">อัพโหลด</button>
+                        <button class="btn-danger" onclick="clearData('uses')" style="flex: 0.5;">ลบข้อมูล</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>3. เวลาใช้ยา (time.xls)</label>
                     <input type="file" id="fileTimes" accept=".xlsx, .xls, .csv">
-                    <button class="btn-primary" onclick="uploadData('fileTimes', 'times')" style="margin-top: 5px; width: 100%;">อัพโหลดเวลา</button>
+                    <div style="display: flex; gap: 5px; margin-top: 5px;">
+                        <button class="btn-primary" onclick="uploadData('fileTimes', 'times')" style="flex: 1;">อัพโหลด</button>
+                        <button class="btn-danger" onclick="clearData('times')" style="flex: 0.5;">ลบข้อมูล</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -417,7 +428,7 @@
             }
         }
 
-        // --- ระบบอัพโหลดและจัดการข้อมูล ---
+        // --- ระบบอัพโหลดและจัดการข้อมูล ลง Local Storage ---
         function uploadData(inputId, type) {
             const file = document.getElementById(inputId).files[0];
             if (!file) return alert("กรุณาเลือกไฟล์ก่อนอัพโหลด");
@@ -427,14 +438,50 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                let jsonData = XLSX.utils.sheet_to_json(firstSheet);
                 
-                localStorage.setItem(`bcp_${type}`, JSON.stringify(jsonData));
-                alert(`อัพโหลดข้อมูลสำเร็จ! (${jsonData.length} รายการ)`);
-                loadFromLocalStorage();
-                updateDashboard();
+                // กระบวนการบีบอัดและกรองข้อมูล (Filter Data)
+                // เลือกเก็บเฉพาะคอลัมน์ที่จำเป็น เพื่อลดขนาดไฟล์และป้องกันปัญหา Local Storage เต็ม (Quota Exceeded)
+                if (type === 'drugs') {
+                    jsonData = jsonData.map(d => ({
+                        Code: d.Code || '',
+                        Name: d.Name || '',
+                        ENName: d.ENName || '',
+                        DrugGenericName: d.DrugGenericName || '',
+                        THTradeName: d.THTradeName || '',
+                        BaseUnit: d.BaseUnit || '',
+                        CurrentPrice: d.CurrentPrice || 0,
+                        RecommendNote: d.RecommendNote || ''
+                    })).filter(d => d.Code || d.Name);
+                } else if (type === 'uses' || type === 'times') {
+                    jsonData = jsonData.map(d => ({
+                        Code: d.Code || '',
+                        Name: d.Name || ''
+                    })).filter(d => d.Code || d.Name);
+                }
+
+                try {
+                    // เซฟลง Local Storage ถาวร
+                    localStorage.setItem(`bcp_${type}`, JSON.stringify(jsonData));
+                    alert(`อัพโหลดและบันทึกข้อมูลสำเร็จ! (${jsonData.length} รายการ)\nสามารถใช้งาน Offline ได้เลยครับ`);
+                    loadFromLocalStorage();
+                    updateDashboard();
+                } catch (error) {
+                    alert('ข้อผิดพลาด: พื้นที่ความจำ Local Storage ไม่เพียงพอ\nกรุณาลองลบข้อมูลเก่าที่ไม่จำเป็นออกก่อนครับ');
+                    console.error('Local Storage Error:', error);
+                }
             };
             reader.readAsArrayBuffer(file);
+        }
+
+        function clearData(type) {
+            let names = { 'drugs': 'รายการยา', 'uses': 'วิธีใช้', 'times': 'เวลาใช้ยา' };
+            if(confirm(`คุณต้องการลบข้อมูล "${names[type]}" ออกจากเครื่องใช่หรือไม่?`)) {
+                localStorage.removeItem(`bcp_${type}`);
+                loadFromLocalStorage();
+                updateDashboard();
+                alert('ลบข้อมูลเรียบร้อยแล้ว');
+            }
         }
 
         function loadFromLocalStorage() {
