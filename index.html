@@ -111,20 +111,32 @@
                 display: block;
                 width: 100mm;  /* กว้าง 10 cm */
                 height: 70mm;  /* สูง 7 cm */
-                padding: 5mm 6mm; 
                 box-sizing: border-box;
                 border: none; /* เอาขอบออกตอนพิมพ์จริง */
                 margin: 0; 
                 page-break-after: always; /* ตัดหน้าเมื่อจบ 1 ดวง */
+                overflow: hidden;
+
+                /* แก้ปัญหาพิมพ์สติ๊กเกอร์กลับหัว */
+                transform: rotate(180deg);
+                transform-origin: center center;
+            }
+
+            body.print-label .drug-label-content {
+                width: 100%;
+                height: 100%;
+                /* เว้นขอบบน (Top) 1 cm (10mm) เพื่อหลบส่วนหัวของสติ๊กเกอร์ */
+                padding: 10mm 6mm 5mm 6mm;
+                box-sizing: border-box;
                 font-size: 13px; 
                 font-family: 'Sarabun', sans-serif;
-                overflow: hidden;
             }
-            body.print-label .drug-label .header-row { font-size: 11px; display: flex; justify-content: space-between; border-bottom: 1px dashed #000; padding-bottom: 3px; margin-bottom: 4px; }
-            body.print-label .drug-label .pt-row { font-size: 14px; display: flex; justify-content: space-between; margin-bottom: 4px; }
-            body.print-label .drug-label .drug-name { font-weight: bold; font-size: 16px; margin-top: 6px; margin-bottom: 6px; }
-            body.print-label .drug-label .sig-row { font-size: 14px; line-height: 1.4; }
-            body.print-label .drug-label .indication-row { font-size: 12px; margin-top: 6px; color: #333; }
+
+            body.print-label .drug-label-content .header-row { font-size: 11px; display: flex; justify-content: space-between; border-bottom: 1px dashed #000; padding-bottom: 3px; margin-bottom: 4px; }
+            body.print-label .drug-label-content .pt-row { font-size: 14px; display: flex; justify-content: space-between; margin-bottom: 4px; }
+            body.print-label .drug-label-content .drug-name { font-weight: bold; font-size: 16px; margin-top: 6px; margin-bottom: 6px; }
+            body.print-label .drug-label-content .sig-row { font-size: 14px; line-height: 1.4; }
+            body.print-label .drug-label-content .indication-row { font-size: 12px; margin-top: 6px; color: #333; }
             
             /* กรณีพิมพ์ใบสั่งยา (A4) */
             body.print-a4 .receipt-doc { 
@@ -662,23 +674,25 @@
 
                 printArea.innerHTML += `
                     <div class="drug-label">
-                        <div class="header-row">
-                            <span>วันที่ ${dateStr}</span>
-                            <span>ใบสั่งยา BCP / ลำดับ ${index + 1}/${cart.length}</span>
-                        </div>
-                        <div class="pt-row">
-                            <span>ชื่อ <strong>${ptName}</strong></span>
-                            <span>HN <strong>${hn}</strong></span>
-                        </div>
-                        <div class="drug-name">
-                            ${item.name} <span style="float:right; font-weight:normal; font-size:14px;">#${item.qty} ${item.unit}</span>
-                        </div>
-                        <div class="sig-row">
-                            ${line1} <br>
-                            ${line2}
-                        </div>
-                        <div class="indication-row">
-                            ${item.indication}
+                        <div class="drug-label-content">
+                            <div class="header-row">
+                                <span>วันที่ ${dateStr}</span>
+                                <span>ใบสั่งยา BCP / ลำดับ ${index + 1}/${cart.length}</span>
+                            </div>
+                            <div class="pt-row">
+                                <span>ชื่อ <strong>${ptName}</strong></span>
+                                <span>HN <strong>${hn}</strong></span>
+                            </div>
+                            <div class="drug-name">
+                                ${item.name} <span style="float:right; font-weight:normal; font-size:14px;">#${item.qty} ${item.unit}</span>
+                            </div>
+                            <div class="sig-row">
+                                ${line1} <br>
+                                ${line2}
+                            </div>
+                            <div class="indication-row">
+                                ${item.indication}
+                            </div>
                         </div>
                     </div>
                 `;
