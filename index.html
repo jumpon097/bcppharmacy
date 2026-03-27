@@ -15,9 +15,9 @@
     <style>
         :root {
             /* ธีมสี ฟ้า-ชมพู */
-            --primary: #005b9f; /* สีฟ้า/น้ำเงิน */
-            --accent: #d81b60; /* สีชมพู */
-            --secondary: #fce4ec; /* สีชมพูอ่อน สำหรับพื้นหลังตาราง */
+            --primary: #005b9f; 
+            --accent: #d81b60; 
+            --secondary: #fce4ec; 
             --success: #28a745;
             --danger: #dc3545;
             --warning: #ffc107;
@@ -64,7 +64,7 @@
         .btn-danger { background: var(--danger); color: white; }
         .btn-warning { background: var(--warning); color: #000; }
         
-        /* New Grid Layout for specific flow */
+        /* Grid Layout */
         .grid-6-cols { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px 15px; align-items: end; }
         .span-1 { grid-column: span 1; }
         .span-1-5 { grid-column: span 1.5; } 
@@ -92,42 +92,45 @@
             color: #666;
             line-height: 1.6;
         }
-        .footer-credit strong { color: var(--primary); font-size: 14px; }
 
-        /* Print Specific Styles */
+        /* --- PRINT STYLES (แก้ปัญหาหน้ากระดาษเปล่า & ปรับแนวนอน) --- */
         @media print {
-            body * { visibility: hidden; }
-            .print-area, .print-area * { visibility: visible; }
-            .print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            /* 1. สั่งซ่อน UI หลักทิ้งไปเลย ไม่ให้กินพื้นที่หน้ากระดาษ */
+            .navbar, .container { display: none !important; }
+            body { background-color: #fff; margin: 0; padding: 0; }
+            
+            /* 2. แสดงเฉพาะพื้นที่พิมพ์ */
+            .print-area { display: block !important; position: static; width: 100%; margin: 0; padding: 0; }
             
             /* แยกการแสดงผลระหว่าง Sticker และ A4 */
             .drug-label { display: none; }
             .receipt-doc { display: none; }
 
-            /* กรณีพิมพ์ฉลากยา (Sticker) */
+            /* กรณีพิมพ์ฉลากยา (Sticker 10x7 cm แนวนอน) */
             body.print-label .drug-label { 
                 display: block;
-                width: 80mm; 
-                height: 50mm; 
-                padding: 4mm; 
-                border: 1px solid #ccc; /* เปลี่ยนเป็น none ได้ถ้าไม่ต้องการกรอบตอนปริ้นจริง */
-                margin-bottom: 2mm; 
-                page-break-after: always; 
-                font-size: 11px; 
+                width: 100mm;  /* กว้าง 10 cm */
+                height: 70mm;  /* สูง 7 cm */
+                padding: 5mm 6mm; 
+                box-sizing: border-box;
+                border: none; /* เอาขอบออกตอนพิมพ์จริง */
+                margin: 0; 
+                page-break-after: always; /* ตัดหน้าเมื่อจบ 1 ดวง */
+                font-size: 13px; 
                 font-family: 'Sarabun', sans-serif;
                 overflow: hidden;
             }
-            body.print-label .drug-label .header-row { font-size: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
-            body.print-label .drug-label .pt-row { font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 2px; }
-            body.print-label .drug-label .drug-name { font-weight: bold; font-size: 14px; margin-bottom: 2px; }
-            body.print-label .drug-label .sig-row { font-size: 12px; line-height: 1.3; }
-            body.print-label .drug-label .indication-row { font-size: 10px; margin-top: 2px; }
+            body.print-label .drug-label .header-row { font-size: 11px; display: flex; justify-content: space-between; border-bottom: 1px dashed #000; padding-bottom: 3px; margin-bottom: 4px; }
+            body.print-label .drug-label .pt-row { font-size: 14px; display: flex; justify-content: space-between; margin-bottom: 4px; }
+            body.print-label .drug-label .drug-name { font-weight: bold; font-size: 16px; margin-top: 6px; margin-bottom: 6px; }
+            body.print-label .drug-label .sig-row { font-size: 14px; line-height: 1.4; }
+            body.print-label .drug-label .indication-row { font-size: 12px; margin-top: 6px; color: #333; }
             
             /* กรณีพิมพ์ใบสั่งยา (A4) */
             body.print-a4 .receipt-doc { 
                 display: block;
                 width: 100%; 
-                padding: 20px; 
+                padding: 10mm; 
                 font-size: 14px; 
             }
             body.print-a4 .receipt-doc .receipt-header { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px; }
@@ -137,9 +140,6 @@
             body.print-a4 .receipt-doc th, body.print-a4 .receipt-doc td { border: 1px solid #000; padding: 5px; }
             body.print-a4 .receipt-doc .total-row { font-weight: bold; text-align: right; }
         }
-
-        /* ปรับหน้ากระดาษเบื้องต้นซ่อน Header/Footer ของ Browser */
-        @page { margin: 0; }
     </style>
 </head>
 <body>
@@ -177,12 +177,11 @@
                 </div>
             </div>
 
-            <!-- ฟอร์มคีย์ยา (Grid 6 คอลัมน์ รองรับการกด Enter/Tab เรียงตามลำดับ) -->
+            <!-- ฟอร์มคีย์ยา -->
             <div style="border: 2px solid var(--accent); padding: 15px; border-radius: 8px; margin-bottom: 20px; background-color: #fffafb;">
                 <h3 style="margin-top: 0; color: var(--accent);">เพิ่มรายการยา <small style="font-weight:normal; font-size:14px; color:#555;">(กด Enter เพื่อเลื่อนช่อง ถัดไป)</small></h3>
                 
                 <div class="grid-6-cols">
-                    <!-- แถวที่ 1 -->
                     <div class="form-group span-3">
                         <label>1. ชื่อยา (รหัส/ชื่อ/EN/Generic/Trade)</label>
                         <input type="text" id="drugSearch" placeholder="พิมพ์คำค้นหาแบบกว้าง..." list="drugList" onchange="selectDrug()" onkeydown="handleEnter(event, 'drugUse', true)">
@@ -201,7 +200,6 @@
                         </datalist>
                     </div>
 
-                    <!-- แถวที่ 2 -->
                     <div class="form-group span-1">
                         <label>4. จำนวน/ครั้ง</label>
                         <input type="text" id="drugDose" placeholder="เช่น 1, 0.5" onkeydown="handleEnter(event, 'drugFreq')">
@@ -227,7 +225,6 @@
                         <datalist id="timeList"></datalist>
                     </div>
 
-                    <!-- แถวที่ 3 -->
                     <div class="form-group span-1">
                         <label>8. จำนวนจ่าย</label>
                         <input type="number" id="drugQty" value="1" min="1" onkeydown="handleEnter(event, 'drugIndication')" onchange="calculateTotal()">
@@ -269,12 +266,9 @@
                 </div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 10px; align-items: center;">
-                    <button class="btn-warning" onclick="printLabels()" style="flex: 1; font-size: 16px;">🖨️ พิมพ์ฉลากยา (เลือกเครื่องพิมพ์ Sticker)</button>
-                    <button class="btn-success" onclick="saveAndPrintReceipt()" style="flex: 1; font-size: 16px;">📄 พิมพ์ใบสั่งยา & บันทึก (เลือกเครื่องพิมพ์ A4)</button>
+                    <button class="btn-warning" onclick="printLabels()" style="flex: 1; font-size: 16px;">🖨️ พิมพ์ฉลากยา 10x7 cm (Sticker)</button>
+                    <button class="btn-success" onclick="saveAndPrintReceipt()" style="flex: 1; font-size: 16px;">📄 พิมพ์ใบสั่งยา A4 & บันทึก</button>
                     <button class="btn-danger" onclick="clearCart()">ล้างหน้าจอทั้งหมด</button>
-                </div>
-                <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
-                    * โปรดตรวจสอบชื่อเครื่องพิมพ์ในหน้าต่าง Print ทุกครั้งก่อนกดพิมพ์
                 </div>
             </div>
         </div>
@@ -312,8 +306,7 @@
             </ul>
             
             <hr>
-            <h3 style="color: var(--primary);">อัพโหลดไฟล์ข้อมูล (รองรับ .xls, .csv, .xlsx)</h3>
-            <p style="font-size: 13px; color: #666;">* ข้อมูลที่อัพโหลดจะถูกจัดเก็บไว้ใน Local Storage ของเบราว์เซอร์อย่างถาวร ทำให้สามารถใช้งานแบบ Offline ได้ 100%</p>
+            <h3 style="color: var(--primary);">อัพโหลดไฟล์ข้อมูล</h3>
             <div class="grid-3">
                 <div class="form-group">
                     <label>1. รายการและราคายา (list2.xls)</label>
@@ -355,7 +348,6 @@
     <div id="printArea" class="print-area"></div>
 
     <script>
-        // ข้อมูลหลักในหน่วยความจำ
         let db = { drugs: [], uses: [], times: [] };
         let cart = [];
         let historyData = [];
@@ -375,41 +367,28 @@
             if(tabId === 'dispense') document.getElementById('drugSearch').focus();
         }
 
-        // --- ระบบ Auto Translate (พิมพ์ Code แล้วเปลี่ยนเป็นชื่อเต็ม) ---
+        // --- ระบบ Auto Translate ---
         function checkAndTranslate(inputId, listName) {
             let el = document.getElementById(inputId);
             let val = el.value.trim().toLowerCase();
             if(!val) return;
-
             let arr = db[listName];
-            // หาว่าที่พิมพ์มาตรงกับ Code ตรงๆ หรือไม่ (ไม่สนใจพิมพ์เล็กพิมพ์ใหญ่)
             let match = arr.find(item => item.Code && String(item.Code).toLowerCase() === val);
-            if(match) {
-                el.value = match.Name; // แปลงร่างเป็นชื่อเต็มทันที
-            }
+            if(match) el.value = match.Name; 
         }
 
         function translateMeal() {
             let el = document.getElementById('drugMeal');
             let val = el.value.trim().toLowerCase();
-            const mealMap = {
-                'ac': 'ก่อนอาหาร',
-                'pc': 'หลังอาหาร',
-                'wm': 'พร้อมอาหาร'
-            };
-            if (mealMap[val]) {
-                el.value = mealMap[val]; // แปลงร่างเป็นคำเต็ม
-            }
+            const mealMap = { 'ac': 'ก่อนอาหาร', 'pc': 'หลังอาหาร', 'wm': 'พร้อมอาหาร' };
+            if (mealMap[val]) el.value = mealMap[val]; 
         }
 
-        // --- ระบบนำทางด้วยคีย์บอร์ด (Enter ตามลำดับเป๊ะๆ) ---
         function handleEnter(event, nextFieldId, isDrugSearch = false) {
             if (event.key === 'Enter') {
                 event.preventDefault(); 
-                
                 if (isDrugSearch) selectDrug();
                 
-                // ตรวจสอบและแปลงคำทันทีเมื่อกด Enter ข้ามช่อง
                 if (event.target.id === 'drugUse') checkAndTranslate('drugUse', 'uses');
                 if (event.target.id === 'drugMeal') translateMeal();
                 if (event.target.id === 'drugTime') checkAndTranslate('drugTime', 'times');
@@ -420,15 +399,12 @@
                     let nextEl = document.getElementById(nextFieldId);
                     if (nextEl) {
                         nextEl.focus();
-                        if(nextEl.type === 'text' || nextEl.type === 'number'){
-                            nextEl.select();
-                        }
+                        if(nextEl.type === 'text' || nextEl.type === 'number') nextEl.select();
                     }
                 }
             }
         }
 
-        // --- ระบบอัพโหลดและจัดการข้อมูล ลง Local Storage ---
         function uploadData(inputId, type) {
             const file = document.getElementById(inputId).files[0];
             if (!file) return alert("กรุณาเลือกไฟล์ก่อนอัพโหลด");
@@ -440,35 +416,24 @@
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 let jsonData = XLSX.utils.sheet_to_json(firstSheet);
                 
-                // กระบวนการบีบอัดและกรองข้อมูล (Filter Data)
-                // เลือกเก็บเฉพาะคอลัมน์ที่จำเป็น เพื่อลดขนาดไฟล์และป้องกันปัญหา Local Storage เต็ม (Quota Exceeded)
                 if (type === 'drugs') {
                     jsonData = jsonData.map(d => ({
-                        Code: d.Code || '',
-                        Name: d.Name || '',
-                        ENName: d.ENName || '',
-                        DrugGenericName: d.DrugGenericName || '',
-                        THTradeName: d.THTradeName || '',
-                        BaseUnit: d.BaseUnit || '',
-                        CurrentPrice: d.CurrentPrice || 0,
+                        Code: d.Code || '', Name: d.Name || '', ENName: d.ENName || '',
+                        DrugGenericName: d.DrugGenericName || '', THTradeName: d.THTradeName || '',
+                        BaseUnit: d.BaseUnit || '', CurrentPrice: d.CurrentPrice || 0,
                         RecommendNote: d.RecommendNote || ''
                     })).filter(d => d.Code || d.Name);
                 } else if (type === 'uses' || type === 'times') {
-                    jsonData = jsonData.map(d => ({
-                        Code: d.Code || '',
-                        Name: d.Name || ''
-                    })).filter(d => d.Code || d.Name);
+                    jsonData = jsonData.map(d => ({ Code: d.Code || '', Name: d.Name || '' })).filter(d => d.Code || d.Name);
                 }
 
                 try {
-                    // เซฟลง Local Storage ถาวร
                     localStorage.setItem(`bcp_${type}`, JSON.stringify(jsonData));
                     alert(`อัพโหลดและบันทึกข้อมูลสำเร็จ! (${jsonData.length} รายการ)\nสามารถใช้งาน Offline ได้เลยครับ`);
                     loadFromLocalStorage();
                     updateDashboard();
                 } catch (error) {
                     alert('ข้อผิดพลาด: พื้นที่ความจำ Local Storage ไม่เพียงพอ\nกรุณาลองลบข้อมูลเก่าที่ไม่จำเป็นออกก่อนครับ');
-                    console.error('Local Storage Error:', error);
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -490,45 +455,37 @@
             db.times = JSON.parse(localStorage.getItem('bcp_times')) || [];
             historyData = JSON.parse(localStorage.getItem('bcp_history')) || [];
 
-            // เติม Datalist ค้นหายา (ดึงคอลัมน์ C,D,O,P ตามลำดับที่ขอ)
             const drugList = document.getElementById('drugList');
             drugList.innerHTML = '';
             db.drugs.forEach(d => {
                 if(d.Code && d.Name) {
                     let option = document.createElement('option');
-                    option.value = d.Name; // ค่าที่จะเอาไปใส่ช่อง Text
-                    
-                    // สร้างข้อความให้ครอบคลุมการค้นหา: [Code] Name | EN | Generic | Trade
+                    option.value = d.Name; 
                     let searchStr = `[${d.Code}] ${d.Name}`;
                     if(d.ENName) searchStr += ` | ${d.ENName}`;
                     if(d.DrugGenericName) searchStr += ` | ${d.DrugGenericName}`;
                     if(d.THTradeName) searchStr += ` | ${d.THTradeName}`;
-                    
                     option.text = searchStr; 
                     drugList.appendChild(option);
                 }
             });
 
-            // เติม Datalist วิธีใช้ (Use) - รองรับพิมพ์ Code (B) ออก Name (C)
             const useList = document.getElementById('useList');
             useList.innerHTML = '';
             db.uses.forEach(u => {
                 if(u.Code && u.Name) {
                     let option = document.createElement('option');
-                    option.value = u.Name;
-                    option.text = `[${u.Code}] ${u.Name}`;
+                    option.value = u.Name; option.text = `[${u.Code}] ${u.Name}`;
                     useList.appendChild(option);
                 }
             });
 
-            // เติม Datalist เวลา (Time) - รองรับพิมพ์ Code (B) ออก Name (C)
             const timeList = document.getElementById('timeList');
             timeList.innerHTML = '';
             db.times.forEach(t => {
                 if(t.Code && t.Name) {
                     let option = document.createElement('option');
-                    option.value = t.Name;
-                    option.text = `[${t.Code}] ${t.Name}`;
+                    option.value = t.Name; option.text = `[${t.Code}] ${t.Name}`;
                     timeList.appendChild(option);
                 }
             });
@@ -550,27 +507,23 @@
             updateStatus('status-times', db.times);
         }
 
-        // --- ระบบจัดยา (และดึงข้อมูล Auto แบบฉลาดขึ้น) ---
         function selectDrug() {
             let search = document.getElementById('drugSearch').value.trim();
             if(!search) return;
 
             let s = search.toLowerCase();
-
-            // ค้นหายาแบบครอบคลุม (Code, Name, ENName, DrugGenericName, THTradeName)
             let drug = db.drugs.find(d => 
                 (d.Code && String(d.Code).toLowerCase() === s) || 
                 (d.Name && d.Name.toLowerCase() === s) || 
                 (d.ENName && d.ENName.toLowerCase() === s) ||
                 (d.DrugGenericName && d.DrugGenericName.toLowerCase() === s) ||
                 (d.THTradeName && d.THTradeName.toLowerCase() === s) ||
-                s.startsWith(`[${String(d.Code).toLowerCase()}]`) // กรณีเลือกจาก dropdown
+                s.startsWith(`[${String(d.Code).toLowerCase()}]`) 
             );
             
             if (drug) {
                 document.getElementById('drugSearch').value = drug.Name;
                 document.getElementById('drugSearch').dataset.code = drug.Code;
-                
                 document.getElementById('drugUnit').value = drug.BaseUnit || '';
                 document.getElementById('drugPrice').value = parseFloat(drug.CurrentPrice) || 0;
                 document.getElementById('drugIndication').value = drug.RecommendNote || '';
@@ -673,7 +626,23 @@
             document.getElementById('hn').focus();
         }
 
-        // --- ระบบพิมพ์ ---
+        // --- ระบบจัดการกระดาษก่อนพิมพ์ (Auto Page Size) ---
+        function setPrintPageSize(type) {
+            let style = document.getElementById('dynamic-print-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'dynamic-print-style';
+                document.head.appendChild(style);
+            }
+            if (type === 'sticker') {
+                // บังคับกระดาษขนาด 10x7 cm แนวนอน (กว้าง 100mm, สูง 70mm)
+                style.innerHTML = `@page { size: 100mm 70mm; margin: 0; }`;
+            } else {
+                // บังคับกระดาษขนาด A4
+                style.innerHTML = `@page { size: A4 portrait; margin: 10mm; }`;
+            }
+        }
+
         function printLabels() {
             if(cart.length === 0) return alert("ไม่มีรายการยา");
             let hn = document.getElementById('hn').value;
@@ -695,14 +664,14 @@
                     <div class="drug-label">
                         <div class="header-row">
                             <span>วันที่ ${dateStr}</span>
-                            <span>เลขที่ใบสั่งยา BCP / ลำดับยา ${index + 1}/${cart.length}</span>
+                            <span>ใบสั่งยา BCP / ลำดับ ${index + 1}/${cart.length}</span>
                         </div>
                         <div class="pt-row">
                             <span>ชื่อ <strong>${ptName}</strong></span>
                             <span>HN <strong>${hn}</strong></span>
                         </div>
                         <div class="drug-name">
-                            ${item.name} <span style="float:right; font-weight:normal; font-size:12px;">#${item.qty} ${item.unit}</span>
+                            ${item.name} <span style="float:right; font-weight:normal; font-size:14px;">#${item.qty} ${item.unit}</span>
                         </div>
                         <div class="sig-row">
                             ${line1} <br>
@@ -715,6 +684,7 @@
                 `;
             });
 
+            setPrintPageSize('sticker');
             document.body.classList.add('print-label');
             window.print();
             document.body.classList.remove('print-label');
@@ -785,6 +755,7 @@
                 </div>
             `;
 
+            setPrintPageSize('a4');
             document.body.classList.add('print-a4');
             window.print();
             document.body.classList.remove('print-a4');
@@ -819,7 +790,7 @@
         function exportCSV() {
             if(historyData.length === 0) return alert("ไม่มีข้อมูลให้ Export");
 
-            let csvContent = "\uFEFF"; // BOM ภาษาไทย
+            let csvContent = "\uFEFF"; 
             csvContent += "Transaction ID,วันเวลา,HN,ชื่อผู้ป่วย,รหัสยา,ชื่อยา,จำนวน,วิธีใช้แบบเต็ม,ราคารวม\n";
 
             historyData.forEach(tx => {
@@ -854,7 +825,6 @@
                 });
             });
         }
-
     </script>
 </body>
 </html>
