@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบ BCP ห้องยา โรงพยาบาลมะเร็งอุบลราชธานี</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#005b9f">
+    <link rel="apple-touch-icon" href="https://img1.pic.in.th/images/logoUBCH.png">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            /* ธีมสี ฟ้า-ชมพู */
+            --primary: #005b9f; /* สีฟ้า/น้ำเงิน */
+            --accent: #d81b60; /* สีชมพู */
+            --secondary: #fce4ec; /* สีชมพูอ่อน สำหรับพื้นหลังตาราง */
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --text: #333;
+        }
+        * { box-sizing: border-box; font-family: 'Sarabun', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; padding: 0; background-color: #f4f7f6; color: var(--text); }
+        
+        /* Navbar & Tabs */
+        .navbar { 
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%); 
+            color: white; 
+            padding: 15px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .navbar-brand { display: flex; align-items: center; gap: 15px; }
+        .navbar-brand img { height: 55px; background: white; border-radius: 50%; padding: 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .navbar-brand h2 { margin: 0; font-size: 22px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+        .navbar-brand p { margin: 0; font-size: 13px; opacity: 0.9; }
+
+        .tabs { display: flex; gap: 10px; }
+        .tab-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 15px; cursor: pointer; border-radius: 4px; font-size: 16px; transition: 0.3s; }
+        .tab-btn:hover { background: rgba(255,255,255,0.3); }
+        .tab-btn.active { background: white; color: var(--accent); font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        /* Layout */
+        .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); min-height: 75vh; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Forms & Inputs */
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 13px; color: #555; }
+        input, select { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 15px; transition: 0.3s; }
+        input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 5px rgba(216, 27, 96, 0.3); background-color: #fff0f5; }
+        input[readonly] { background-color: #e9ecef; cursor: not-allowed; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: #000; }
+        
+        /* New Grid Layout for specific flow */
+        .grid-6-cols { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px 15px; align-items: end; }
+        .span-1 { grid-column: span 1; }
+        .span-1-5 { grid-column: span 1.5; } 
+        .span-2 { grid-column: span 2; }
+        .span-3 { grid-column: span 3; }
+        .span-4 { grid-column: span 4; }
+        
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: var(--secondary); color: #880e4f; }
+        
+        /* Dashboard Status */
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; }
+        .status-ok { background: #d4edda; color: #155724; }
+        .status-none { background: #f8d7da; color: #721c24; }
+
+        /* Credits Footer */
+        .footer-credit {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px dashed #ccc;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+        .footer-credit strong { color: var(--primary); font-size: 14px; }
+
+        /* Print Specific Styles */
+        @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            
+            /* แยกการแสดงผลระหว่าง Sticker และ A4 */
+            .drug-label { display: none; }
+            .receipt-doc { display: none; }
+
+            /* กรณีพิมพ์ฉลากยา (Sticker) */
+            body.print-label .drug-label { 
+                display: block;
+                width: 80mm; 
+                height: 50mm; 
+                padding: 4mm; 
+                border: 1px solid #ccc; /* เปลี่ยนเป็น none ได้ถ้าไม่ต้องการกรอบตอนปริ้นจริง */
+                margin-bottom: 2mm; 
+                page-break-after: always; 
+                font-size: 11px; 
+                font-family: 'Sarabun', sans-serif;
+                overflow: hidden;
+            }
+            body.print-label .drug-label .header-row { font-size: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 2px; margin-bottom: 3px; }
+            body.print-label .drug-label .pt-row { font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 2px; }
+            body.print-label .drug-label .drug-name { font-weight: bold; font-size: 14px; margin-bottom: 2px; }
+            body.print-label .drug-label .sig-row { font-size: 12px; line-height: 1.3; }
+            body.print-label .drug-label .indication-row { font-size: 10px; margin-top: 2px; }
+            
+            /* กรณีพิมพ์ใบสั่งยา (A4) */
+            body.print-a4 .receipt-doc { 
+                display: block;
+                width: 100%; 
+                padding: 20px; 
+                font-size: 14px; 
+            }
+            body.print-a4 .receipt-doc .receipt-header { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px; }
+            body.print-a4 .receipt-doc .receipt-header img { height: 60px; }
+            body.print-a4 .receipt-doc h2 { margin: 0; text-align: center; }
+            body.print-a4 .receipt-doc table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            body.print-a4 .receipt-doc th, body.print-a4 .receipt-doc td { border: 1px solid #000; padding: 5px; }
+            body.print-a4 .receipt-doc .total-row { font-weight: bold; text-align: right; }
+        }
+
+        /* ปรับหน้ากระดาษเบื้องต้นซ่อน Header/Footer ของ Browser */
+        @page { margin: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="navbar-brand">
+            <img src="https://img1.pic.in.th/images/logoUBCH.png" alt="UBCH Logo">
+            <div>
+                <h2>ระบบ BCP ห้องยา โรงพยาบาลมะเร็งอุบลราชธานี</h2>
+                <p>Offline Pharmacy System (Stand-alone)</p>
+            </div>
+        </div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('dispense')">จ่ายยา (คีย์ด่วน)</button>
+            <button class="tab-btn" onclick="switchTab('history')">ประวัติการจ่าย</button>
+            <button class="tab-btn" onclick="switchTab('settings')">ตั้งค่าระบบ</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- TAB: จ่ายยา -->
+        <div id="dispense" class="tab-content active">
+            
+            <!-- ข้อมูลผู้ป่วย -->
+            <div style="background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--primary);">
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+                    <div class="form-group" style="margin: 0;">
+                        <label>HN</label>
+                        <input type="text" id="hn" placeholder="ระบุ HN" onkeydown="handleEnter(event, 'patientName')">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>ชื่อ-นามสกุลผู้ป่วย</label>
+                        <input type="text" id="patientName" placeholder="ระบุชื่อผู้ป่วย" onkeydown="handleEnter(event, 'drugSearch')">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ฟอร์มคีย์ยา (Grid 6 คอลัมน์ รองรับการกด Enter/Tab เรียงตามลำดับ) -->
+            <div style="border: 2px solid var(--accent); padding: 15px; border-radius: 8px; margin-bottom: 20px; background-color: #fffafb;">
+                <h3 style="margin-top: 0; color: var(--accent);">เพิ่มรายการยา <small style="font-weight:normal; font-size:14px; color:#555;">(กด Enter เพื่อเลื่อนช่อง ถัดไป)</small></h3>
+                
+                <div class="grid-6-cols">
+                    <!-- แถวที่ 1 -->
+                    <div class="form-group span-3">
+                        <label>1. ชื่อยา (รหัส/ชื่อ/EN/Generic/Trade)</label>
+                        <input type="text" id="drugSearch" placeholder="พิมพ์คำค้นหาแบบกว้าง..." list="drugList" onchange="selectDrug()" onkeydown="handleEnter(event, 'drugUse', true)">
+                        <datalist id="drugList"></datalist>
+                    </div>
+                    <div class="form-group span-2">
+                        <label>2. วิธีใช้ยา (พิมพ์ Code ได้ เช่น po)</label>
+                        <input type="text" id="drugUse" placeholder="เช่น รับประทาน, ทา หรือรหัสวิธีใช้" list="useList" onchange="checkAndTranslate('drugUse', 'uses')" onkeydown="handleEnter(event, 'drugUnit')">
+                        <datalist id="useList"></datalist>
+                    </div>
+                    <div class="form-group span-1">
+                        <label>3. หน่วย (Auto)</label>
+                        <input type="text" id="drugUnit" placeholder="ดึงจาก BaseUnit" list="unitList" onkeydown="handleEnter(event, 'drugDose')">
+                        <datalist id="unitList">
+                            <option value="เม็ด"><option value="แคปซูล"><option value="ซีซี"><option value="มล."><option value="ช้อนชา"><option value="ช้อนโต๊ะ"><option value="ซอง"><option value="หยด"><option value="หลอด"><option value="vial">
+                        </datalist>
+                    </div>
+
+                    <!-- แถวที่ 2 -->
+                    <div class="form-group span-1">
+                        <label>4. จำนวน/ครั้ง</label>
+                        <input type="text" id="drugDose" placeholder="เช่น 1, 0.5" onkeydown="handleEnter(event, 'drugFreq')">
+                    </div>
+                    <div class="form-group span-1">
+                        <label>5. วันละ(ครั้ง)</label>
+                        <input type="text" id="drugFreq" placeholder="เช่น 3" list="freqList" onkeydown="handleEnter(event, 'drugMeal')">
+                        <datalist id="freqList"><option value="1"><option value="2"><option value="3"><option value="4"></datalist>
+                    </div>
+                    <div class="form-group span-2">
+                        <label>6. ac or pc (ก่อน/หลังอาหาร)</label>
+                        <input type="text" id="drugMeal" placeholder="เช่น ก่อนอาหาร" list="mealList" onkeydown="handleEnter(event, 'drugTime')">
+                        <datalist id="mealList"><option value="ก่อนอาหาร"><option value="หลังอาหาร"><option value="พร้อมอาหาร"></datalist>
+                    </div>
+                    <div class="form-group span-2">
+                        <label>7. เวลา (พิมพ์ Code ได้ เช่น bid)</label>
+                        <input type="text" id="drugTime" placeholder="เช่น เช้า เย็น หรือรหัสเวลา" list="timeList" onchange="checkAndTranslate('drugTime', 'times')" onkeydown="handleEnter(event, 'drugQty')">
+                        <datalist id="timeList"></datalist>
+                    </div>
+
+                    <!-- แถวที่ 3 -->
+                    <div class="form-group span-1">
+                        <label>8. จำนวนจ่าย</label>
+                        <input type="number" id="drugQty" value="1" min="1" onkeydown="handleEnter(event, 'drugIndication')" onchange="calculateTotal()">
+                    </div>
+                    <div class="form-group span-1">
+                        <label>9. ราคา/หน่วย (Auto)</label>
+                        <input type="number" id="drugPrice" readonly tabindex="-1">
+                        <input type="hidden" id="drugTotal">
+                    </div>
+                    <div class="form-group span-4">
+                        <label>10. สรรพคุณ (Auto/แก้ไขได้)</label>
+                        <input type="text" id="drugIndication" placeholder="ดึงจาก RecommendNote..." onkeydown="handleEnter(event, 'ADD')">
+                    </div>
+                </div>
+
+                <div style="text-align: right; margin-top: 15px;">
+                    <button class="btn-primary" style="background-color: var(--accent);" onclick="addDrugToCart()">+ กด Enter บันทึกลงรายการ</button>
+                </div>
+            </div>
+
+            <!-- รายการยาที่เลือก -->
+            <div>
+                <h3 style="color: var(--primary);">รายการยาที่จัด</h3>
+                <table id="cartTable">
+                    <thead>
+                        <tr>
+                            <th width="5%">ลำดับ</th>
+                            <th width="25%">รายการยา</th>
+                            <th width="10%">จำนวนจ่าย</th>
+                            <th width="45%">วิธีใช้และสรรพคุณ</th>
+                            <th width="10%">ราคารวม</th>
+                            <th width="5%">ลบ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartBody"></tbody>
+                </table>
+                <div style="text-align: right; margin-top: 15px; font-size: 20px;">
+                    <strong>ยอดรวมทั้งหมด: <span id="grandTotal" style="color: var(--danger);">0</span> บาท</strong>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px; align-items: center;">
+                    <button class="btn-warning" onclick="printLabels()" style="flex: 1; font-size: 16px;">🖨️ พิมพ์ฉลากยา (เลือกเครื่องพิมพ์ Sticker)</button>
+                    <button class="btn-success" onclick="saveAndPrintReceipt()" style="flex: 1; font-size: 16px;">📄 พิมพ์ใบสั่งยา & บันทึก (เลือกเครื่องพิมพ์ A4)</button>
+                    <button class="btn-danger" onclick="clearCart()">ล้างหน้าจอทั้งหมด</button>
+                </div>
+                <div style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+                    * โปรดตรวจสอบชื่อเครื่องพิมพ์ในหน้าต่าง Print ทุกครั้งก่อนกดพิมพ์
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: ประวัติ -->
+        <div id="history" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="color: var(--primary);">ประวัติการจ่ายยา (รอนำเข้า HIS)</h3>
+                <div>
+                    <button class="btn-success" onclick="exportCSV()">📥 Export ไฟล์ CSV สำหรับคีย์ย้อนหลัง</button>
+                    <button class="btn-danger" onclick="clearHistory()">🗑️ ล้างประวัติทั้งหมด</button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>เวลา</th>
+                        <th>HN</th>
+                        <th>ชื่อผู้ป่วย</th>
+                        <th>จำนวนรายการยา</th>
+                        <th>ยอดรวม (บาท)</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody"></tbody>
+            </table>
+        </div>
+
+        <!-- TAB: ตั้งค่า -->
+        <div id="settings" class="tab-content">
+            <h3 style="color: var(--primary);">สถานะข้อมูลในเครื่อง</h3>
+            <ul>
+                <li>รายการยา (list2.xls): <span id="status-drugs" class="status-badge status-none">ไม่มีข้อมูล</span></li>
+                <li>วิธีใช้ (use.xls): <span id="status-uses" class="status-badge status-none">ไม่มีข้อมูล</span></li>
+                <li>เวลาใช้ยา (time.xls): <span id="status-times" class="status-badge status-none">ไม่มีข้อมูล</span></li>
+            </ul>
+            
+            <hr>
+            <h3 style="color: var(--primary);">อัพโหลดไฟล์ข้อมูล (รองรับ .xls, .csv, .xlsx)</h3>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label>1. รายการและราคายา (list2.xls)</label>
+                    <input type="file" id="fileDrugs" accept=".xlsx, .xls, .csv">
+                    <button class="btn-primary" onclick="uploadData('fileDrugs', 'drugs')" style="margin-top: 5px; width: 100%;">อัพโหลดรายการยา</button>
+                </div>
+                <div class="form-group">
+                    <label>2. วิธีใช้ (use.xls)</label>
+                    <input type="file" id="fileUses" accept=".xlsx, .xls, .csv">
+                    <button class="btn-primary" onclick="uploadData('fileUses', 'uses')" style="margin-top: 5px; width: 100%;">อัพโหลดวิธีใช้</button>
+                </div>
+                <div class="form-group">
+                    <label>3. เวลาใช้ยา (time.xls)</label>
+                    <input type="file" id="fileTimes" accept=".xlsx, .xls, .csv">
+                    <button class="btn-primary" onclick="uploadData('fileTimes', 'times')" style="margin-top: 5px; width: 100%;">อัพโหลดเวลา</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- เครดิตผู้พัฒนา -->
+        <div class="footer-credit">
+            <strong>ระบบสำรองฉุกเฉิน (BCP) ห้องยา โรงพยาบาลมะเร็งอุบลราชธานี</strong><br>
+            ออกแบบและพัฒนาโดย: ภก.จุมพล อุทธา <br>
+            หัวหน้างานคลังยาและเภสัชสารสนเทศ กลุ่มงานเภสัชกรรม โรงพยาบาลมะเร็งอุบลราชธานี
+        </div>
+
+    </div>
+
+    <!-- พื้นที่สำหรับ Print -->
+    <div id="printArea" class="print-area"></div>
+
+    <script>
+        // ข้อมูลหลักในหน่วยความจำ
+        let db = { drugs: [], uses: [], times: [] };
+        let cart = [];
+        let historyData = [];
+
+        window.onload = function() {
+            loadFromLocalStorage();
+            updateDashboard();
+            loadHistory();
+            document.getElementById('hn').focus();
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+            if(tabId === 'dispense') document.getElementById('drugSearch').focus();
+        }
+
+        // --- ระบบ Auto Translate (พิมพ์ Code แล้วเปลี่ยนเป็นชื่อเต็ม) ---
+        function checkAndTranslate(inputId, listName) {
+            let el = document.getElementById(inputId);
+            let val = el.value.trim().toLowerCase();
+            if(!val) return;
+
+            let arr = db[listName];
+            // หาว่าที่พิมพ์มาตรงกับ Code ตรงๆ หรือไม่ (ไม่สนใจพิมพ์เล็กพิมพ์ใหญ่)
+            let match = arr.find(item => item.Code && String(item.Code).toLowerCase() === val);
+            if(match) {
+                el.value = match.Name; // แปลงร่างเป็นชื่อเต็มทันที
+            }
+        }
+
+        // --- ระบบนำทางด้วยคีย์บอร์ด (Enter ตามลำดับเป๊ะๆ) ---
+        function handleEnter(event, nextFieldId, isDrugSearch = false) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); 
+                
+                if (isDrugSearch) selectDrug();
+                
+                // ตรวจสอบและแปลงคำทันทีเมื่อกด Enter ข้ามช่อง
+                if (event.target.id === 'drugUse') checkAndTranslate('drugUse', 'uses');
+                if (event.target.id === 'drugTime') checkAndTranslate('drugTime', 'times');
+
+                if (nextFieldId === 'ADD') {
+                    addDrugToCart();
+                } else {
+                    let nextEl = document.getElementById(nextFieldId);
+                    if (nextEl) {
+                        nextEl.focus();
+                        if(nextEl.type === 'text' || nextEl.type === 'number'){
+                            nextEl.select();
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- ระบบอัพโหลดและจัดการข้อมูล ---
+        function uploadData(inputId, type) {
+            const file = document.getElementById(inputId).files[0];
+            if (!file) return alert("กรุณาเลือกไฟล์ก่อนอัพโหลด");
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                localStorage.setItem(`bcp_${type}`, JSON.stringify(jsonData));
+                alert(`อัพโหลดข้อมูลสำเร็จ! (${jsonData.length} รายการ)`);
+                loadFromLocalStorage();
+                updateDashboard();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function loadFromLocalStorage() {
+            db.drugs = JSON.parse(localStorage.getItem('bcp_drugs')) || [];
+            db.uses = JSON.parse(localStorage.getItem('bcp_uses')) || [];
+            db.times = JSON.parse(localStorage.getItem('bcp_times')) || [];
+            historyData = JSON.parse(localStorage.getItem('bcp_history')) || [];
+
+            // เติม Datalist ค้นหายา (ดึงคอลัมน์ C,D,O,P ตามลำดับที่ขอ)
+            const drugList = document.getElementById('drugList');
+            drugList.innerHTML = '';
+            db.drugs.forEach(d => {
+                if(d.Code && d.Name) {
+                    let option = document.createElement('option');
+                    option.value = d.Name; // ค่าที่จะเอาไปใส่ช่อง Text
+                    
+                    // สร้างข้อความให้ครอบคลุมการค้นหา: [Code] Name | EN | Generic | Trade
+                    let searchStr = `[${d.Code}] ${d.Name}`;
+                    if(d.ENName) searchStr += ` | ${d.ENName}`;
+                    if(d.DrugGenericName) searchStr += ` | ${d.DrugGenericName}`;
+                    if(d.THTradeName) searchStr += ` | ${d.THTradeName}`;
+                    
+                    option.text = searchStr; 
+                    drugList.appendChild(option);
+                }
+            });
+
+            // เติม Datalist วิธีใช้ (Use) - รองรับพิมพ์ Code (B) ออก Name (C)
+            const useList = document.getElementById('useList');
+            useList.innerHTML = '';
+            db.uses.forEach(u => {
+                if(u.Code && u.Name) {
+                    let option = document.createElement('option');
+                    option.value = u.Name;
+                    option.text = `[${u.Code}] ${u.Name}`;
+                    useList.appendChild(option);
+                }
+            });
+
+            // เติม Datalist เวลา (Time) - รองรับพิมพ์ Code (B) ออก Name (C)
+            const timeList = document.getElementById('timeList');
+            timeList.innerHTML = '';
+            db.times.forEach(t => {
+                if(t.Code && t.Name) {
+                    let option = document.createElement('option');
+                    option.value = t.Name;
+                    option.text = `[${t.Code}] ${t.Name}`;
+                    timeList.appendChild(option);
+                }
+            });
+        }
+
+        function updateDashboard() {
+            const updateStatus = (id, data) => {
+                const el = document.getElementById(id);
+                if (data && data.length > 0) {
+                    el.className = 'status-badge status-ok';
+                    el.innerText = `พร้อมใช้งาน (${data.length} รายการ)`;
+                } else {
+                    el.className = 'status-badge status-none';
+                    el.innerText = `ไม่มีข้อมูล`;
+                }
+            };
+            updateStatus('status-drugs', db.drugs);
+            updateStatus('status-uses', db.uses);
+            updateStatus('status-times', db.times);
+        }
+
+        // --- ระบบจัดยา (และดึงข้อมูล Auto แบบฉลาดขึ้น) ---
+        function selectDrug() {
+            let search = document.getElementById('drugSearch').value.trim();
+            if(!search) return;
+
+            let s = search.toLowerCase();
+
+            // ค้นหายาแบบครอบคลุม (Code, Name, ENName, DrugGenericName, THTradeName)
+            let drug = db.drugs.find(d => 
+                (d.Code && String(d.Code).toLowerCase() === s) || 
+                (d.Name && d.Name.toLowerCase() === s) || 
+                (d.ENName && d.ENName.toLowerCase() === s) ||
+                (d.DrugGenericName && d.DrugGenericName.toLowerCase() === s) ||
+                (d.THTradeName && d.THTradeName.toLowerCase() === s) ||
+                s.startsWith(`[${String(d.Code).toLowerCase()}]`) // กรณีเลือกจาก dropdown
+            );
+            
+            if (drug) {
+                document.getElementById('drugSearch').value = drug.Name;
+                document.getElementById('drugSearch').dataset.code = drug.Code;
+                
+                document.getElementById('drugUnit').value = drug.BaseUnit || '';
+                document.getElementById('drugPrice').value = parseFloat(drug.CurrentPrice) || 0;
+                document.getElementById('drugIndication').value = drug.RecommendNote || '';
+            } else {
+                document.getElementById('drugSearch').dataset.code = "MANUAL";
+                document.getElementById('drugUnit').value = '';
+                document.getElementById('drugPrice').value = 0;
+                document.getElementById('drugIndication').value = '';
+            }
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let price = parseFloat(document.getElementById('drugPrice').value) || 0;
+            let qty = parseInt(document.getElementById('drugQty').value) || 1;
+            document.getElementById('drugTotal').value = price * qty;
+        }
+
+        function addDrugToCart() {
+            selectDrug();
+            calculateTotal();
+
+            let hn = document.getElementById('hn').value;
+            if(!hn) {
+                alert('กรุณาระบุ HN ก่อนจัดยา');
+                document.getElementById('hn').focus();
+                return;
+            }
+
+            let code = document.getElementById('drugSearch').dataset.code || "";
+            let name = document.getElementById('drugSearch').value.trim();
+            let qty = parseInt(document.getElementById('drugQty').value) || 1;
+            let price = parseFloat(document.getElementById('drugPrice').value) || 0;
+            let total = parseFloat(document.getElementById('drugTotal').value) || 0;
+            
+            let use = document.getElementById('drugUse').value.trim();
+            let unit = document.getElementById('drugUnit').value.trim();
+            let dose = document.getElementById('drugDose').value.trim();
+            let freq = document.getElementById('drugFreq').value.trim();
+            let meal = document.getElementById('drugMeal').value.trim();
+            let time = document.getElementById('drugTime').value.trim();
+            let indication = document.getElementById('drugIndication').value.trim();
+
+            if(!name) {
+                document.getElementById('drugSearch').focus();
+                return;
+            }
+
+            let cleanUse = use.replace(/ครั้งละ/g, '').trim();
+            
+            cart.push({ code, name, qty, price, total, use, cleanUse, unit, dose, freq, meal, time, indication });
+            renderCart();
+            
+            const fieldsToClear = ['drugSearch', 'drugUse', 'drugUnit', 'drugDose', 'drugFreq', 'drugMeal', 'drugTime', 'drugIndication', 'drugPrice', 'drugTotal'];
+            fieldsToClear.forEach(id => document.getElementById(id).value = '');
+            document.getElementById('drugSearch').dataset.code = '';
+            document.getElementById('drugQty').value = '1';
+            
+            document.getElementById('drugSearch').focus();
+        }
+
+        function renderCart() {
+            const tbody = document.getElementById('cartBody');
+            tbody.innerHTML = '';
+            let grandTotal = 0;
+
+            cart.forEach((item, index) => {
+                grandTotal += item.total;
+                
+                let freqText = item.freq ? `วันละ ${item.freq} ครั้ง` : '';
+                let doseText = item.dose ? `ครั้งละ ${item.dose} ${item.unit}` : '';
+                let sig = `${item.cleanUse} ${doseText} ${freqText} ${item.meal} ${item.time}`.replace(/\s+/g, ' ').trim();
+                let indHtml = item.indication ? `<br><small style="color:var(--accent);">สรรพคุณ: ${item.indication}</small>` : '';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="text-align: center;">${index + 1}</td>
+                        <td><strong>${item.name}</strong><br><small style="color:gray;">[${item.code}]</small></td>
+                        <td style="text-align: center; font-weight:bold; font-size:16px;">${item.qty} ${item.unit}</td>
+                        <td>${sig} ${indHtml}</td>
+                        <td style="text-align: right;">${item.total.toLocaleString()}</td>
+                        <td style="text-align: center;"><button class="btn-danger" onclick="removeCart(${index})" style="padding: 5px 10px;">X</button></td>
+                    </tr>
+                `;
+            });
+            document.getElementById('grandTotal').innerText = grandTotal.toLocaleString();
+        }
+
+        function removeCart(index) {
+            cart.splice(index, 1);
+            renderCart();
+            document.getElementById('drugSearch').focus();
+        }
+
+        function clearCart() {
+            cart = [];
+            document.getElementById('hn').value = '';
+            document.getElementById('patientName').value = '';
+            renderCart();
+            document.getElementById('hn').focus();
+        }
+
+        // --- ระบบพิมพ์ ---
+        function printLabels() {
+            if(cart.length === 0) return alert("ไม่มีรายการยา");
+            let hn = document.getElementById('hn').value;
+            let ptName = document.getElementById('patientName').value;
+            
+            let d = new Date();
+            let dateStr = d.toLocaleDateString('th-TH', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' ' + d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0') + ' น.';
+
+            let printArea = document.getElementById('printArea');
+            printArea.innerHTML = '';
+            
+            cart.forEach((item, index) => {
+                let freqText = item.freq ? `วันละ ${item.freq} ครั้ง` : '';
+                let doseText = item.dose ? `ครั้งละ ${item.dose} ${item.unit}` : '';
+                let line1 = `${item.cleanUse} ${doseText} ${freqText}`.replace(/\s+/g, ' ').trim();
+                let line2 = `${item.meal} ${item.time}`.replace(/\s+/g, ' ').trim();
+
+                printArea.innerHTML += `
+                    <div class="drug-label">
+                        <div class="header-row">
+                            <span>วันที่ ${dateStr}</span>
+                            <span>เลขที่ใบสั่งยา BCP / ลำดับยา ${index + 1}/${cart.length}</span>
+                        </div>
+                        <div class="pt-row">
+                            <span>ชื่อ <strong>${ptName}</strong></span>
+                            <span>HN <strong>${hn}</strong></span>
+                        </div>
+                        <div class="drug-name">
+                            ${item.name} <span style="float:right; font-weight:normal; font-size:12px;">#${item.qty} ${item.unit}</span>
+                        </div>
+                        <div class="sig-row">
+                            ${line1} <br>
+                            ${line2}
+                        </div>
+                        <div class="indication-row">
+                            ${item.indication}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.body.classList.add('print-label');
+            window.print();
+            document.body.classList.remove('print-label');
+        }
+
+        function saveAndPrintReceipt() {
+            if(cart.length === 0) return alert("ไม่มีรายการยา");
+            
+            let hn = document.getElementById('hn').value;
+            let ptName = document.getElementById('patientName').value;
+            let date = new Date();
+            let grandTotal = document.getElementById('grandTotal').innerText;
+
+            let transaction = {
+                id: Date.now(),
+                timestamp: date.toLocaleString('th-TH'),
+                hn: hn,
+                patientName: ptName,
+                total: grandTotal.replace(/,/g, ''),
+                items: JSON.parse(JSON.stringify(cart))
+            };
+            historyData.push(transaction);
+            localStorage.setItem('bcp_history', JSON.stringify(historyData));
+            loadHistory();
+
+            let printArea = document.getElementById('printArea');
+            let itemsHtml = cart.map((item, idx) => {
+                let sig = `${item.cleanUse} ครั้งละ ${item.dose} ${item.unit} ${item.freq ? `วันละ ${item.freq} ครั้ง` : ''} ${item.meal} ${item.time}`;
+                return `
+                <tr>
+                    <td style="text-align:center;">${idx + 1}</td>
+                    <td><strong>${item.name}</strong> <br><small>${sig}</small></td>
+                    <td style="text-align:center;">${item.qty} ${item.unit}</td>
+                    <td style="text-align:right;">${item.price}</td>
+                    <td style="text-align:right;">${item.total}</td>
+                </tr>
+            `}).join('');
+
+            printArea.innerHTML = `
+                <div class="receipt-doc">
+                    <div class="receipt-header">
+                        <img src="https://img1.pic.in.th/images/logoUBCH.png" alt="UBCH Logo">
+                        <div>
+                            <h2>ใบสั่งยา / สรุปการจ่ายยา (ระบบสำรองฉุกเฉิน BCP)</h2>
+                            <h3 style="margin:5px 0 0 0; text-align:center; color:#333;">โรงพยาบาลมะเร็งอุบลราชธานี</h3>
+                        </div>
+                    </div>
+                    <p><strong>วันที่:</strong> ${date.toLocaleString('th-TH')}</p>
+                    <p><strong>HN:</strong> ${hn} &nbsp;&nbsp;&nbsp;&nbsp; <strong>ชื่อผู้ป่วย:</strong> ${ptName}</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="5%">ลำดับ</th>
+                                <th width="50%">รายการยา</th>
+                                <th width="15%">จำนวนจ่าย</th>
+                                <th width="15%">ราคา/หน่วย</th>
+                                <th width="15%">รวม</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                            <tr>
+                                <td colspan="4" class="total-row">ยอดรวมทั้งสิ้น</td>
+                                <td class="total-row">${grandTotal} บาท</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.body.classList.add('print-a4');
+            window.print();
+            document.body.classList.remove('print-a4');
+            clearCart();
+        }
+
+        // --- ระบบประวัติและ Export ---
+        function loadHistory() {
+            const tbody = document.getElementById('historyBody');
+            tbody.innerHTML = '';
+            historyData.forEach(h => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${h.timestamp}</td>
+                        <td>${h.hn}</td>
+                        <td>${h.patientName}</td>
+                        <td>${h.items.length}</td>
+                        <td>${parseFloat(h.total).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function clearHistory() {
+            if(confirm("แน่ใจหรือไม่ว่าต้องการลบประวัติทั้งหมด? (ควรทำหลังจาก Export เข้าระบบ HIS แล้วเท่านั้น)")) {
+                historyData = [];
+                localStorage.removeItem('bcp_history');
+                loadHistory();
+            }
+        }
+
+        function exportCSV() {
+            if(historyData.length === 0) return alert("ไม่มีข้อมูลให้ Export");
+
+            let csvContent = "\uFEFF"; // BOM ภาษาไทย
+            csvContent += "Transaction ID,วันเวลา,HN,ชื่อผู้ป่วย,รหัสยา,ชื่อยา,จำนวน,วิธีใช้แบบเต็ม,ราคารวม\n";
+
+            historyData.forEach(tx => {
+                tx.items.forEach(item => {
+                    let ptName = `"${tx.patientName || ''}"`;
+                    let drugName = `"${item.name || ''}"`;
+                    let sig = `"${item.cleanUse} ครั้งละ ${item.dose} ${item.unit} วันละ ${item.freq} ครั้ง ${item.meal} ${item.time} ${item.indication}"`.replace(/\s+/g, ' ').trim();
+                    
+                    let row = `${tx.id},${tx.timestamp},${tx.hn},${ptName},${item.code},${drugName},${item.qty},${sig},${item.total}`;
+                    csvContent += row + "\n";
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Pharmacy_BCP_Export_${new Date().getTime()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- PWA Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
+    </script>
+</body>
+</html>
